@@ -1,7 +1,7 @@
 [package]
 name = "edit-class"
-version = "0.1.0"
-description = "编辑class - 替换 Java class 文件中的字符串"
+version = "0.1.1"
+description = "class编辑器 - 替换 Java class 文件中的字符串"
 authors = ["editclass"]
 edition = "2021"
 

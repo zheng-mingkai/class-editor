@@ -14,7 +14,7 @@ export function TitleBar({ mode, onThemeChange }: TitleBarProps) {
     <div className="titlebar">
       <div className="titlebar-title">
         <span className="titlebar-brand-dot" />
-        编辑class
+        class编辑器
       </div>
       <div className="theme-toggle">
         {options.map((o) => (

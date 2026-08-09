@@ -1,6 +1,6 @@
 <div align="center">
 
-# 编辑class / EditClass
+# class编辑器 / ClassEditor
 
 **一个用于替换 Java `.class` / `.jar` 文件中字符串字面量的跨平台桌面应用**
 **A cross-platform desktop app to replace string literals inside compiled Java `.class` / `.jar` files**
@@ -20,13 +20,13 @@ Built with Tauri 2 + Rust + React 18
 
 ### 中文
 
-`编辑class` 是一个桌面工具，可以直接修改 Java 编译后 `.class` 文件（或 `.jar` 归档中某个条目）的常量池字符串字面量。无需重新编译源码，无需反编译再编译——直接在字节码层面替换字符串，配合内置 CFR 反编译器实时查看代码效果。
+`class编辑器` 是一个桌面工具，可以直接修改 Java 编译后 `.class` 文件（或 `.jar` 归档中某个条目）的常量池字符串字面量。无需重新编译源码，无需反编译再编译——直接在字节码层面替换字符串，配合内置 CFR 反编译器实时查看代码效果。
 
 **适用场景**：快速修复硬编码 URL、文案、配置 key，国际化调整，调试期临时改值，CTF / 逆向辅助等。
 
 ### English
 
-`EditClass` is a desktop tool that directly edits string literals in the constant pool of compiled Java `.class` files (or individual entries inside a `.jar` archive). No source recompilation, no decompile-then-recompile round-trip — strings are replaced at the bytecode level, with a built-in CFR decompiler showing the code context in real time.
+`ClassEditor` is a desktop tool that directly edits string literals in the constant pool of compiled Java `.class` files (or individual entries inside a `.jar` archive). No source recompilation, no decompile-then-recompile round-trip — strings are replaced at the bytecode level, with a built-in CFR decompiler showing the code context in real time.
 
 **Use cases**: quick fixes to hardcoded URLs / copy / config keys, i18n tweaks, debug-time value patching, CTF / reverse-engineering assistance.
 

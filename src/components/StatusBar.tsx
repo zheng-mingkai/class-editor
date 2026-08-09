@@ -27,7 +27,7 @@ export function StatusBar({
       )}
       <div className="status-spacer" />
       {error && <span className="status-error">{error}</span>}
-      <div className="status-item">编辑class v0.1.0</div>
+      <div className="status-item">class编辑器 v0.1.1</div>
     </div>
   );
 }
