@@ -24,3 +24,6 @@ desktop.ini
 
 # 临时文件
 *.tmp
+
+# 发布产物（二进制不进版本库）
+release-assets/
