@@ -1,0 +1,26 @@
+# 依赖
+node_modules/
+src-tauri/target/
+
+# 构建产物
+dist/
+src-tauri/target/
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 备份文件（应用生成）
+*.class.bak
+*.jar.bak
+
+# 临时文件
+*.tmp

@@ -1,0 +1,81 @@
+@import "./tokens.css";
+@import "./components.css";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+input,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--surface);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* 可拖动分隔线样式 */
+[data-panel-resize-handle-id] {
+  position: relative;
+  background: var(--border);
+  transition: background 0.15s ease;
+}
+[data-panel-resize-handle-id][data-resize-handle-state="hover"],
+[data-panel-resize-handle-id][data-resize-handle-state="drag"] {
+  background: var(--brand);
+}
+[data-panel-group-direction="horizontal"] > [data-panel-resize-handle-id] {
+  width: 1px;
+  cursor: col-resize;
+}
+[data-panel-group-direction="vertical"] > [data-panel-resize-handle-id] {
+  height: 1px;
+  cursor: row-resize;
+}
+/* 增大可点击区域 */
+[data-panel-resize-handle-id]::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+}
