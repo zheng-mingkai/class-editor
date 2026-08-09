@@ -12,6 +12,10 @@ Built with Tauri 2 + Rust + React 18
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)]()
 
+<br>
+
+✨ **本软件由 trae work cn 辅助开发 / This software was developed with the assistance of trae work cn**
+
 </div>
 
 ---
