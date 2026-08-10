@@ -8,7 +8,7 @@
 基于 Tauri 2 + Rust + React 18 构建 · Windows · macOS · Linux
 Built with Tauri 2 + Rust + React 18
 
-[![Release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/zheng-mingkai/editClassString/releases/tag/v0.1.0)
+[![Release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/zheng-mingkai/class-editor/releases/tag/v0.1.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)]()
 
@@ -75,7 +75,7 @@ Built with Tauri 2 + Rust + React 18
 
 从 Release 页面下载 `class-v0.1.0-windows-x64.exe`，双击即可运行，无需安装。
 
-Download `class-v0.1.0-windows-x64.exe` from the [Releases page](https://github.com/zheng-mingkai/editClassString/releases), double-click to run — no installer required.
+Download `class-v0.1.0-windows-x64.exe` from the [Releases page](https://github.com/zheng-mingkai/class-editor/releases), double-click to run — no installer required.
 
 **运行需求 / Requirements**:
 - Windows 10 / 11 (x64)
@@ -89,7 +89,7 @@ v0.1.0 仅提供 Windows 预编译包。macOS / Linux 用户请从源码构建�
 v0.1.0 ships a Windows build only. macOS / Linux users please build from source:
 
 ```bash
-git clone https://github.com/zheng-mingkai/editClassString.git
+git clone https://github.com/zheng-mingkai/class-editor.git
 cd editClassString
 npm install
 npm run tauri build
@@ -211,6 +211,6 @@ See the [LICENSE](./LICENSE) file for details.
 
 <div align="center">
 
-**[⬇ 下载 / Download](https://github.com/zheng-mingkai/editClassString/releases/latest)** · **[🐛 报告问题 / Report issue](https://github.com/zheng-mingkai/editClassString/issues)**
+**[⬇ 下载 / Download](https://github.com/zheng-mingkai/class-editor/releases/latest)** · **[🐛 报告问题 / Report issue](https://github.com/zheng-mingkai/class-editor/issues)**
 
 </div>
