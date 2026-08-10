@@ -57,7 +57,7 @@ pub fn decompile(
         f.write_all(class_bytes)?;
     }
 
-    let output = Command::new(&java_bin)
+    let output = new_command(&java_bin)
         .arg("-Dfile.encoding=UTF-8")
         .arg("-jar")
         .arg(&cfr_jar)
@@ -96,7 +96,7 @@ pub fn get_bytecode(class_bytes: &[u8], jdk_path: &str) -> Result<String, Decomp
         f.write_all(class_bytes)?;
     }
 
-    let output = Command::new(&javap_bin)
+    let output = new_command(&javap_bin)
         .arg("-J-Dfile.encoding=UTF-8")
         .arg("-c")
         .arg("-p")
@@ -134,6 +134,177 @@ pub fn locate_string_occurrences(source: &str, target: &str) -> Vec<TextRange> {
         }
     }
     ranges
+}
+
+/// 用 javap -c -l 解析字节码，建立常量池索引 → 源码行号数组映射。
+///
+/// 同一个常量池索引可能被多处 `ldc` 指令引用（Java 常量池去重），
+/// 因此一个索引可能对应多个源码行号。
+pub fn locate_constant_indices(class_bytes: &[u8], jdk_path: &str) -> Result<std::collections::HashMap<u16, Vec<usize>>, DecompileError> {
+    let javap_bin = javap_executable(jdk_path)?;
+
+    let temp_dir = std::env::temp_dir();
+    let class_stem = format!("editclass_{}", random_id());
+    let temp_class = temp_dir.join(format!("{}.class", class_stem));
+    {
+        let mut f = fs::File::create(&temp_class)?;
+        f.write_all(class_bytes)?;
+    }
+
+    let output = new_command(&javap_bin)
+        .arg("-J-Dfile.encoding=UTF-8")
+        .arg("-c")
+        .arg("-l")
+        .arg("-p")
+        .arg("-cp")
+        .arg(&temp_dir)
+        .arg(&class_stem)
+        .output()
+        .map_err(|e| DecompileError::Failed(e.to_string()))?;
+
+    let _ = fs::remove_file(&temp_class);
+
+    if !output.status.success() {
+        let err = decode_text(&output.stderr);
+        return Err(DecompileError::Failed(err));
+    }
+
+    let text = decode_text(&output.stdout);
+    Ok(parse_javap_index_to_lines(&text))
+}
+
+/// LineNumberTable 条目：(起始偏移, 行号)
+struct LineNumberEntry {
+    start_pc: usize,
+    line: usize,
+}
+
+/// 解析 javap -c -l 输出，提取常量池索引 → 源码行号数组映射。
+///
+/// 解析流程（每个方法内独立处理）：
+/// 1. 先收集所有 ldc/ldc_w 指令：(字节码偏移, 常量池索引)
+/// 2. 再收集 LineNumberTable：(起始偏移, 行号)
+/// 3. LineNumberTable 结束时，将每个 ldc 偏移映射到对应行号
+fn parse_javap_index_to_lines(text: &str) -> std::collections::HashMap<u16, Vec<usize>> {
+    let mut map: std::collections::HashMap<u16, Vec<usize>> = std::collections::HashMap::new();
+    let mut current_ldcs: Vec<(usize, u16)> = Vec::new();
+    let mut current_lnt: Vec<LineNumberEntry> = Vec::new();
+    let mut in_line_number_table = false;
+
+    // 处理完一个方法时，根据 ldc 偏移和 LineNumberTable 计算行号映射
+    let flush_method = |ldcs: &[(usize, u16)],
+                        lnt: &[LineNumberEntry],
+                        out: &mut std::collections::HashMap<u16, Vec<usize>>| {
+        if lnt.is_empty() {
+            return;
+        }
+        for &(ldc_pc, const_idx) in ldcs {
+            // 找到 ldc_pc 落在哪个 LNT 区间
+            // LNT 按 start_pc 升序，取 start_pc <= ldc_pc 的最大条目
+            let mut line = lnt[0].line;
+            for entry in lnt {
+                if entry.start_pc <= ldc_pc {
+                    line = entry.line;
+                } else {
+                    break;
+                }
+            }
+            out.entry(const_idx).or_default().push(line);
+        }
+    };
+
+    for line in text.lines() {
+        let trimmed = line.trim();
+
+        // 方法分隔：遇到新方法签名（非 Code/LineNumberTable/注释/字节码行）时 flush
+        // 如果检测到 "Code:"、"LineNumberTable:" 或字节码指令行，不 flush
+        let is_code_or_table = trimmed.contains("Code:")
+            || trimmed.contains("LineNumberTable:");
+        let is_bytecode_line = trimmed
+            .find(':')
+            .map(|pos| trimmed[..pos].trim().chars().all(|c| c.is_ascii_digit()))
+            .unwrap_or(false);
+
+        if !trimmed.is_empty()
+            && !is_code_or_table
+            && !is_bytecode_line
+            && !trimmed.starts_with("line ")
+            && !trimmed.starts_with("LocalVariableTable:")
+            && !trimmed.starts_with("stack=")
+            && !trimmed.starts_with("//")
+            && !trimmed.starts_with("Exception table:")
+        {
+            // 可能是新方法或其他分隔，flush 上一个方法的数据
+            if !current_ldcs.is_empty() {
+                flush_method(&current_ldcs, &current_lnt, &mut map);
+            }
+            current_ldcs.clear();
+            current_lnt.clear();
+            in_line_number_table = false;
+            continue;
+        }
+
+        // 检测 LineNumberTable 段开始
+        if trimmed.contains("LineNumberTable:") {
+            in_line_number_table = true;
+            continue;
+        }
+
+        if in_line_number_table {
+            if let Some(rest) = trimmed.strip_prefix("line ") {
+                if let Some(colon_pos) = rest.find(':') {
+                    let line_num: usize = rest[..colon_pos].trim().parse().unwrap_or(0);
+                    let offset: usize = rest[colon_pos + 1..].trim().parse().unwrap_or(0);
+                    current_lnt.push(LineNumberEntry {
+                        start_pc: offset,
+                        line: line_num,
+                    });
+                    current_lnt.sort_by_key(|e| e.start_pc);
+                    continue;
+                }
+            }
+            // LineNumberTable 段结束（下一个 line 条目不匹配）
+            in_line_number_table = false;
+            // 注意：不要在此 flush，方法结束时统一 flush（可能还有 LocalVariableTable）
+        }
+
+        // 解析字节码指令行
+        if is_bytecode_line {
+            if let Some(colon_pos) = trimmed.find(':') {
+                let offset_str = trimmed[..colon_pos].trim();
+                let offset: usize = offset_str.parse().unwrap_or(0);
+                let after_colon = trimmed[colon_pos + 1..].trim();
+
+                // ldc / ldc_w / ldc2_w 均可能引用字符串常量池索引
+                // ldc_w 用于 >255 的索引，ldc2_w 用于 long/double（不涉及字符串）
+                if after_colon.starts_with("ldc") && !after_colon.starts_with("ldc2") {
+                    if let Some(hash_pos) = after_colon.find('#') {
+                        let after_hash = &after_colon[hash_pos + 1..];
+                        let num_str: String = after_hash
+                            .chars()
+                            .take_while(|c| c.is_ascii_digit())
+                            .collect();
+                        if let Ok(const_idx) = num_str.parse::<u16>() {
+                            current_ldcs.push((offset, const_idx));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // flush 最后一个方法
+    if !current_ldcs.is_empty() {
+        flush_method(&current_ldcs, &current_lnt, &mut map);
+    }
+
+    // 对每个索引的行号数组去重并排序
+    for lines in map.values_mut() {
+        lines.sort_unstable();
+        lines.dedup();
+    }
+
+    map
 }
 
 /// 将嵌入的 CFR JAR 释放到临时目录，返回 JAR 路径。
@@ -199,4 +370,16 @@ fn decode_text(bytes: &[u8]) -> String {
     } else {
         cow.to_string()
     }
+}
+
+/// 创建子进程命令，Windows 上设置 CREATE_NO_WINDOW 标志避免弹出黑窗口。
+fn new_command<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW = 0x08000000，阻止为子进程创建控制台窗口
+        cmd.creation_flags(0x0800_0000);
+    }
+    cmd
 }

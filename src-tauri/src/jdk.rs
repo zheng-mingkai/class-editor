@@ -68,7 +68,7 @@ fn try_jdk(home: &PathBuf, source: JdkSource) -> Option<JdkInfo> {
 }
 
 fn parse_java_version(java_bin: &PathBuf) -> Option<String> {
-    let output = Command::new(java_bin).arg("-version").output().ok()?;
+    let output = new_command(java_bin).arg("-version").output().ok()?;
     // java -version 输出到 stderr
     let text = String::from_utf8_lossy(&output.stderr);
     for line in text.lines() {
@@ -81,6 +81,17 @@ fn parse_java_version(java_bin: &PathBuf) -> Option<String> {
         }
     }
     None
+}
+
+/// 创建子进程命令，Windows 上设置 CREATE_NO_WINDOW 标志避免弹出黑窗口。
+fn new_command<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    cmd
 }
 
 /// 返回各操作系统常见 JDK 安装路径。

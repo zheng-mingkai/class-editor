@@ -108,16 +108,19 @@ fn insert_node(node: &mut FileTreeNode, parts: &[&str], entry: &JarEntry) {
         } else {
             format!("{}/{}", node.path, name)
         };
-        if idx.is_none() {
-            node.children.push(FileTreeNode {
-                name: name.clone(),
-                path: path.clone(),
-                is_dir: true,
-                children: Vec::new(),
-                size: None,
-            });
-        }
-        let i = node.children.len() - 1;
+        let i = match idx {
+            Some(i) => i,
+            None => {
+                node.children.push(FileTreeNode {
+                    name: name.clone(),
+                    path: path.clone(),
+                    is_dir: true,
+                    children: Vec::new(),
+                    size: None,
+                });
+                node.children.len() - 1
+            }
+        };
         insert_node(&mut node.children[i], &parts[1..], entry);
     }
 }

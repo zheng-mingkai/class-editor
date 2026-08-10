@@ -65,3 +65,21 @@ export interface Modification {
   index: number;
   new_value: string;
 }
+
+/** 全局搜索命中结果 */
+export interface SearchHit {
+  source_label: string;
+  jar_path: string | null;
+  entry_name: string | null;
+  class_name: string;
+  index: number;
+  value: string;
+  byte_length: number;
+  match_preview: string;
+}
+
+/** 批量替换请求 */
+export interface BatchReplacement {
+  entry_name: string | null;
+  modifications: Modification[];
+}

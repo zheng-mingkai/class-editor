@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import type { TextRange } from "../types/classfile";
 
 interface CodePaneProps {
@@ -28,6 +28,18 @@ export function CodePane({
     [occurrences]
   );
   const lines = content ? content.split("\n") : [];
+  const codeViewRef = useRef<HTMLDivElement>(null);
+  const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // 当 occurrences 变化时，滚动到第一个高亮行
+  useEffect(() => {
+    if (occurrences.length === 0) return;
+    const firstLine = occurrences[0].line;
+    const el = lineRefs.current[firstLine - 1];
+    if (el && codeViewRef.current) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [occurrences]);
 
   return (
     <div className="pane">
@@ -52,7 +64,6 @@ export function CodePane({
         )}
       </div>
       <div className="pane-body">
-        {state.loading && <div className="empty-hint">反编译中…</div>}
         {state.error && (
           <div className="empty-hint" style={{ color: "var(--danger)" }}>
             {state.error}
@@ -62,10 +73,11 @@ export function CodePane({
           <div className="empty-hint">打开 class 文件后显示反编译源码</div>
         )}
         {content && (
-          <div className="code-view">
+          <div className="code-view" ref={codeViewRef}>
             {lines.map((line, i) => (
               <div
                 key={i}
+                ref={(el) => { lineRefs.current[i] = el; }}
                 className={`code-line ${highlightLines.has(i + 1) ? "highlight" : ""}`}
               >
                 <span className="code-line-num">{i + 1}</span>

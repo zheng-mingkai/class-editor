@@ -1,13 +1,21 @@
 import type { ClassState } from "../hooks/useClassFile";
 import type { FileTreeNode } from "../types/classfile";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface FileTreePaneProps {
   state: ClassState;
   onOpenClass: (jarPath: string, entryName: string) => void;
+  /** 当前选中的 JAR 内条目路径（用于高亮） */
+  activeEntryName?: string | null;
 }
 
-export function FileTreePane({ state, onOpenClass }: FileTreePaneProps) {
+/** 判断 node.path 是否是 targetPath 的祖先目录 */
+function isAncestor(nodePath: string, targetPath: string | null | undefined): boolean {
+  if (!targetPath) return false;
+  return targetPath.startsWith(nodePath + "/");
+}
+
+export function FileTreePane({ state, onOpenClass, activeEntryName }: FileTreePaneProps) {
   const jarInfo = (window as any).__editclass_jar_tree;
   return (
     <div className="pane">
@@ -38,10 +46,12 @@ export function FileTreePane({ state, onOpenClass }: FileTreePaneProps) {
               {state.displayName}
             </div>
             <TreeView
+              key={activeEntryName ?? "none"}
               node={jarInfo.file_tree}
               jarPath={state.jarPath}
               onOpenClass={onOpenClass}
               depth={0}
+              activeEntryName={activeEntryName}
             />
           </div>
         )}
@@ -55,9 +65,10 @@ interface TreeViewProps {
   jarPath: string;
   onOpenClass: (jarPath: string, entryName: string) => void;
   depth: number;
+  activeEntryName?: string | null;
 }
 
-function TreeView({ node, jarPath, onOpenClass, depth }: TreeViewProps) {
+function TreeView({ node, jarPath, onOpenClass, depth, activeEntryName }: TreeViewProps) {
   return (
     <div className="tree-children" style={{ paddingLeft: depth > 0 ? 12 : 0 }}>
       {node.children.map((child) => (
@@ -67,6 +78,7 @@ function TreeView({ node, jarPath, onOpenClass, depth }: TreeViewProps) {
           jarPath={jarPath}
           onOpenClass={onOpenClass}
           depth={depth}
+          activeEntryName={activeEntryName}
         />
       ))}
     </div>
@@ -78,13 +90,23 @@ function TreeItem({
   jarPath,
   onOpenClass,
   depth,
+  activeEntryName,
 }: TreeViewProps) {
-  const [expanded, setExpanded] = useState(depth < 1);
+  // 初始展开：顶层默认展开，或者当前节点是 activeEntryName 的祖先
+  // key 变化时整个 TreeView 重挂载，所以 useMemo([]) 能拿到正确的 activeEntryName
+  const shouldExpandInitially = useMemo(
+    () => depth < 1 || isAncestor(node.path, activeEntryName),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const [expanded, setExpanded] = useState(shouldExpandInitially);
   const isClass = !node.is_dir && node.name.endsWith(".class");
+  const isActive = activeEntryName === node.path;
+
   return (
     <div className="tree-node">
       <div
-        className="tree-row"
+        className={`tree-row ${isActive ? "active" : ""}`}
         onClick={() => {
           if (node.is_dir) setExpanded((v) => !v);
           else if (isClass) onOpenClass(jarPath, node.path);
@@ -101,6 +123,7 @@ function TreeItem({
           jarPath={jarPath}
           onOpenClass={onOpenClass}
           depth={depth + 1}
+          activeEntryName={activeEntryName}
         />
       )}
     </div>

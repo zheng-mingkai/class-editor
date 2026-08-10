@@ -123,23 +123,54 @@ impl ConstantPool {
             .and_then(|e| e.as_mut())
     }
 
-    /// 返回所有被 CONSTANT_String_info 引用的 Utf8 索引集合（即"字面量"）。
+    /// 返回所有被 CONSTANT_String_info 引用、且不被其他结构引用的 Utf8 索引集合（即"纯字面量"）。
+    ///
+    /// 同一个 Utf8 条目可能同时被 CONSTANT_String_info 和 CONSTANT_NameAndType /
+    /// CONSTANT_Class 等引用。修改这类共享条目会破坏 class 结构，因此需要排除。
     pub fn literal_utf8_indices(&self) -> std::collections::HashSet<u16> {
-        let mut set = std::collections::HashSet::new();
+        let mut string_refs = std::collections::HashSet::new();
+        let mut struct_refs = std::collections::HashSet::new();
+
         for e in self.entries.iter().flatten() {
-            if let ConstantEntry::Other {
-                tag: ConstantTag::String,
-                bytes,
-            } = e
-            {
-                // String_info: u2 string_index（大端）
-                if bytes.len() >= 2 {
-                    let idx = u16::from_be_bytes([bytes[0], bytes[1]]);
-                    set.insert(idx);
+            if let ConstantEntry::Other { tag, bytes } = e {
+                match tag {
+                    // CONSTANT_String_info → string_index (u2)
+                    ConstantTag::String => {
+                        if bytes.len() >= 2 {
+                            let idx = u16::from_be_bytes([bytes[0], bytes[1]]);
+                            string_refs.insert(idx);
+                        }
+                    }
+                    // CONSTANT_Class_info → name_index (u2)
+                    ConstantTag::Class => {
+                        if bytes.len() >= 2 {
+                            let idx = u16::from_be_bytes([bytes[0], bytes[1]]);
+                            struct_refs.insert(idx);
+                        }
+                    }
+                    // CONSTANT_NameAndType_info → name_index (u2) + descriptor_index (u2)
+                    ConstantTag::NameAndType => {
+                        if bytes.len() >= 4 {
+                            let name_idx = u16::from_be_bytes([bytes[0], bytes[1]]);
+                            let desc_idx = u16::from_be_bytes([bytes[2], bytes[3]]);
+                            struct_refs.insert(name_idx);
+                            struct_refs.insert(desc_idx);
+                        }
+                    }
+                    // CONSTANT_MethodType_info → descriptor_index (u2)
+                    ConstantTag::MethodType => {
+                        if bytes.len() >= 2 {
+                            let idx = u16::from_be_bytes([bytes[0], bytes[1]]);
+                            struct_refs.insert(idx);
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
-        set
+
+        // 只返回被 CONSTANT_String_info 引用、且不被结构引用的"纯字面量"
+        string_refs.difference(&struct_refs).copied().collect()
     }
 
     /// 返回所有 Utf8 条目的 (索引, 值) 列表。

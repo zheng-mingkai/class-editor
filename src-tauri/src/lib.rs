@@ -28,6 +28,10 @@ pub fn run() {
             commands::set_jdk_path,
             commands::decompile_class,
             commands::get_bytecode,
+            commands::locate_string_lines,
+            commands::search_strings,
+            commands::batch_save,
+            commands::open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
